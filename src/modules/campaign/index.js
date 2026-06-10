@@ -306,8 +306,8 @@ router.post('/:id/send', (req, res) => {
 
     let templateA = version;
     let templateB = version;
-    let subjectA = campaign.subject;
-    let subjectB = campaign.subject;
+    let subjectA = campaign.abConfig.versionA.subject || campaign.subject;
+    let subjectB = campaign.abConfig.versionB.subject || campaign.subject;
 
     if (campaign.abConfig.versionA.templateVersionId) {
       const vA = storage.templateVersions.get(campaign.abConfig.versionA.templateVersionId);
@@ -318,11 +318,16 @@ router.post('/:id/send', (req, res) => {
       if (vB) { templateB = vB; subjectB = campaign.abConfig.versionB.subject || campaign.subject; }
     }
 
-    userIds.forEach((userId, index) => {
+    let countA = 0;
+    let countB = 0;
+
+    userIds.forEach((userId) => {
       const user = storage.users.get(userId);
       if (!user) return;
 
-      const ratio = (index % totalWeight) < weightA ? 'A' : 'B';
+      const ratioA = countA * totalWeight < (countA + countB + 1) * weightA;
+      const ratio = ratioA ? 'A' : 'B';
+      if (ratio === 'A') countA++; else countB++;
       const tmpl = ratio === 'A' ? templateA : templateB;
       const subj = ratio === 'A' ? subjectA : subjectB;
 

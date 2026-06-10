@@ -93,6 +93,15 @@ class EmailQueue {
       createdAt: new Date(),
       error: null
     };
+
+    if (isUnsubscribed(emailData.to)) {
+      job.status = 'skipped';
+      job.skippedReason = 'user_unsubscribed';
+      job.finishedAt = new Date();
+      storage.sends.set(job.id, job);
+      return job;
+    }
+
     this.queue.push(job);
     this.process();
     return job;
