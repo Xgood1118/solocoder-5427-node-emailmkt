@@ -34,7 +34,8 @@ router.get('/check/:email', (req, res) => {
 });
 
 router.post('/unsubscribe/:email', (req, res) => {
-  const entry = addUnsubscribe(req.params.email, req.body?.reason || 'user_request');
+  const reason = (req.body && req.body.reason) || (req.query && req.query.reason) || 'user_request';
+  const entry = addUnsubscribe(req.params.email, reason);
   res.json({
     success: true,
     message: '退订成功，我们将在24小时内停止向您发送营销邮件',
@@ -136,17 +137,37 @@ router.post('/sender-status/:key/resume', (req, res) => {
 });
 
 router.get('/list', (req, res) => {
-  const { page = 1, limit = 100 } = req.query;
-  const allEntries = Array.from(storage.unsubscribes.values());
-  const start = (page - 1) * limit;
-  const end = start + parseInt(limit, 10);
+  const { page = 1, limit = 100, reason, email, sort = 'desc' } = req.query;
+  let allEntries = Array.from(storage.unsubscribes.values());
+
+  if (reason) {
+    allEntries = allEntries.filter(e => e.reason === reason);
+  }
+
+  if (email) {
+    const emailLower = email.toLowerCase();
+    allEntries = allEntries.filter(e => e.email.toLowerCase().includes(emailLower));
+  }
+
+  allEntries.sort((a, b) => {
+    if (sort === 'asc') {
+      return new Date(a.unsubscribedAt) - new Date(b.unsubscribedAt);
+    }
+    return new Date(b.unsubscribedAt) - new Date(a.unsubscribedAt);
+  });
+
+  const pageNum = parseInt(page, 10);
+  const limitNum = parseInt(limit, 10);
+  const start = (pageNum - 1) * limitNum;
+  const end = start + limitNum;
   const paginated = allEntries.slice(start, end);
 
   res.json({
     success: true,
     total: allEntries.length,
-    page: parseInt(page, 10),
-    limit: parseInt(limit, 10),
+    page: pageNum,
+    limit: limitNum,
+    filteredCount: paginated.length,
     unsubscribes: paginated
   });
 });
