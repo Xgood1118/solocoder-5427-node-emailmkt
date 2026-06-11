@@ -1,0 +1,1 @@
+队列里有个时序漏洞：emailQueue.add() 在入队那一刻调一次 isUnsubscribed 之后就再也不查了，可 process() 和 sendEmail() 在真正发 SMTP 那一刻没再二次校验，用户要是入队后才退订，照样会收到邮件，24h 抑制逻辑对这部分人没生效。检查修复一下。
